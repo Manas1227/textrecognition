@@ -42,6 +42,9 @@ public class InstanceB {
             } 
         } catch (IOException e) {
             System.err.println("Failed to open the output file: " + e.getMessage());
+        } finally {
+            sqsClient.close();
+            rekClient.close();
         }
     }
 
