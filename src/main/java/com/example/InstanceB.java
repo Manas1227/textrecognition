@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.sqs.model.Message;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.List;
 
 public class InstanceB {
@@ -34,14 +35,17 @@ public class InstanceB {
         // Continuously poll for messages from SQS
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("/home/ec2_user/output.txt", true))) {
             while (true) {
-                receiveMessages(sqsClient, bucketName, rekClient, queueUrl, writer);
+                boolean shouldTerminate = receiveMessages(sqsClient, bucketName, rekClient, queueUrl, writer);
+                if(shouldTerminate){
+                    break;
+                }
             } 
-        } catch (Exception e) {
+        } catch (IOException e) {
             System.err.println("Failed to open the output file: " + e.getMessage());
         }
     }
 
-    public static void receiveMessages(SqsClient sqsClient, String bucketName, RekognitionClient rekClient, String queueUrl, BufferedWriter writer) {
+    public static boolean receiveMessages(SqsClient sqsClient, String bucketName, RekognitionClient rekClient, String queueUrl, BufferedWriter writer) {
         // Set up long polling to receive messages from SQS
         ReceiveMessageRequest receiveRequest = ReceiveMessageRequest.builder()
                 .queueUrl(queueUrl)
@@ -59,7 +63,7 @@ public class InstanceB {
             // Check for termination signal (-1)
             if (imageKey.equals("-1")) {
                 System.out.println("Received termination signal. No more messages to process.");
-                return;  // Stop processing further messages
+                return true;  // Stop processing further messages
             }
 
             System.out.println("Processing image key: " + imageKey);
@@ -71,6 +75,7 @@ public class InstanceB {
             sqsClient.deleteMessage(r -> r.queueUrl(queueUrl).receiptHandle(message.receiptHandle()));
             System.out.println("Deleted message: " + message.messageId());
         }
+        return false;
     }
 
     public static void performTextRecognition(RekognitionClient rekClient, String bucketName, String imageKey, BufferedWriter writer) {
@@ -99,7 +104,8 @@ public class InstanceB {
                 try {
                     writer.write(output);
                     writer.newLine();
-                } catch (Exception e) {
+                    writer.flush();
+                } catch (IOException e) {
                     System.err.println("Error while writing to file: " + e.getMessage());
                 }
             }
