@@ -9,6 +9,8 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageResponse;
 import software.amazon.awssdk.services.sqs.model.Message;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.util.List;
 
 public class InstanceB {
@@ -30,12 +32,16 @@ public class InstanceB {
                 .build();
 
         // Continuously poll for messages from SQS
-        while (true) {
-            receiveMessages(sqsClient, bucketName, rekClient, queueUrl);
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("/home/ec2_user/output.txt", true))) {
+            while (true) {
+                receiveMessages(sqsClient, bucketName, rekClient, queueUrl, writer);
+            } 
+        } catch (Exception e) {
+            System.err.println("Failed to open the output file: " + e.getMessage());
         }
     }
 
-    public static void receiveMessages(SqsClient sqsClient, String bucketName, RekognitionClient rekClient, String queueUrl) {
+    public static void receiveMessages(SqsClient sqsClient, String bucketName, RekognitionClient rekClient, String queueUrl, BufferedWriter writer) {
         // Set up long polling to receive messages from SQS
         ReceiveMessageRequest receiveRequest = ReceiveMessageRequest.builder()
                 .queueUrl(queueUrl)
@@ -59,7 +65,7 @@ public class InstanceB {
             System.out.println("Processing image key: " + imageKey);
 
             // Call method to perform text recognition
-            performTextRecognition(rekClient, bucketName, imageKey);
+            performTextRecognition(rekClient, bucketName, imageKey, writer);
 
             // Delete the message from the queue after processing
             sqsClient.deleteMessage(r -> r.queueUrl(queueUrl).receiptHandle(message.receiptHandle()));
@@ -67,7 +73,7 @@ public class InstanceB {
         }
     }
 
-    public static void performTextRecognition(RekognitionClient rekClient, String bucketName, String imageKey) {
+    public static void performTextRecognition(RekognitionClient rekClient, String bucketName, String imageKey, BufferedWriter writer) {
         try {
             // Create the Image object for Rekognition
             Image image = Image.builder()
@@ -86,9 +92,16 @@ public class InstanceB {
             DetectTextResponse detectTextResponse = rekClient.detectText(detectTextRequest);
             List<TextDetection> detectedTexts = detectTextResponse.textDetections();
 
-            // Output detected text
+            // Output detected text and write it to output file
             for (TextDetection text : detectedTexts) {
-                System.out.println("Detected text: " + text.detectedText() + " (Confidence: " + text.confidence() + ")");
+                String output = "Image Key: " + imageKey + ", Detected Text: " + text.detectedText() + " (confidence: " + text.confidence() + ")";
+                System.out.println(output);
+                try {
+                    writer.write(output);
+                    writer.newLine();
+                } catch (Exception e) {
+                    System.err.println("Error while writing to file: " + e.getMessage());
+                }
             }
 
         } catch (RekognitionException e) {
