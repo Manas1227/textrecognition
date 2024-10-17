@@ -33,7 +33,7 @@ public class InstanceB {
                 .build();
 
         // Continuously poll for messages from SQS
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("/home/ec2_user/output.txt", true))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt", true))) {
             while (true) {
                 boolean shouldTerminate = receiveMessages(sqsClient, bucketName, rekClient, queueUrl, writer);
                 if(shouldTerminate){
