@@ -14,8 +14,8 @@ import java.util.List;
 public class TextRecognition {
 
     public static void main(String[] args) {
-        String queueUrl = "your-sqs-queue-url"; // Replace with actual SQS Queue URL
-        String bucketName = "njit-cs-643";  // Your S3 bucket name
+        String queueUrl = "https://sqs.us-east-1.amazonaws.com/610111708296/imageindexes";
+        String bucketName = "njit-cs-643";  // S3 bucket name
         Region region = Region.US_EAST_1;   // Region where your resources are
 
         // Initialize AWS Clients
