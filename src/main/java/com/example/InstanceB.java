@@ -11,7 +11,7 @@ import software.amazon.awssdk.services.sqs.model.Message;
 
 import java.util.List;
 
-public class TextRecognition {
+public class InstanceB {
 
     public static void main(String[] args) {
         String queueUrl = "https://sqs.us-east-1.amazonaws.com/610111708296/imageindexes";
